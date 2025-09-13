@@ -116,7 +116,9 @@ def webhook():
         logging.info(f"🎯 Intent: {intent_display_name}, Tag: {tag}, Parameters: {parameters}")
 
         # --- Handle Feedback ---
-        if intent_display_name == "FeedbackIntent" or tag == "feedback-recommend":
+        if intent_display_name == "FeedbackIntent" or (
+            tag == "feedback-recommend" and parameters.get("feedback_text")
+        ):
             feedback_text = parameters.get("feedback_text")
             if feedback_text and db is not None:
                 try:
@@ -130,13 +132,15 @@ def webhook():
                     logging.error(f"❌ Error saving feedback to Firestore: {e}")
                     message = "Sorry, I couldn't save your feedback at this time."
             else:
-                message = "Sorry, no feedback text provided or database unavailable."
+                # If no text provided, skip responding with "no feedback" during other flows
+                message = None
 
-            fulfillment_response = {
-                "fulfillmentResponse": {
-                    "messages": [{"text": {"text": [message]}}]
+            if message:
+                fulfillment_response = {
+                    "fulfillmentResponse": {
+                        "messages": [{"text": {"text": [message]}}]
+                    }
                 }
-            }
 
         # --- Handle Recommend ---
         elif intent_display_name == "RecommendIntent" or tag == "recommend-share":
@@ -154,7 +158,7 @@ def webhook():
             else:
                 fulfillment_response = {
                     "fulfillmentResponse": {
-                        "messages": [{"text": {"text": ["Sorry, I did not receive a valid phone number."]}}]
+                        "messages": [{"text": {"text": ["Please provide a valid phone number to share the link."]}}]
                     }
                 }
 
