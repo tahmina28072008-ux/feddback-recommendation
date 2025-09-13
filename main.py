@@ -18,7 +18,17 @@ app = Flask(__name__)
 # Twilio credentials should be set as environment variables.
 account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
 auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
-twilio_client = Client(account_sid, auth_token)
+
+# Initialize Twilio client only if credentials are found
+twilio_client = None
+if account_sid and auth_token:
+    try:
+        twilio_client = Client(account_sid, auth_token)
+        logging.info("Twilio client initialized successfully.")
+    except Exception as e:
+        logging.error(f"Error initializing Twilio client: {e}")
+else:
+    logging.warning("Twilio credentials not found. WhatsApp messages will not be sent.")
 
 # --- Firestore Connection Setup ---
 # Attempt to initialize Firebase with different credential methods.
@@ -53,6 +63,9 @@ def send_whatsapp_message(to_number, message_body):
         tuple: A boolean indicating success and a string message.
     """
     from_number = "whatsapp:+14155238886"  # Your Twilio Sandbox number
+    if not twilio_client:
+        return False, "Twilio client is not initialized. Cannot send message."
+        
     try:
         logging.info(f"Attempting to send WhatsApp message to {to_number}")
         twilio_client.messages.create(
@@ -129,7 +142,7 @@ def webhook():
                 }
             }
 
-        # --- Handle SendRecommendation Intent ---
+        # --- Handle Recommend Intent ---
         elif intent_display_name == 'RecommendIntent':
             # This intent is triggered after the user provides the recipient's phone number.
             recipient_number = parameters.get('recipient_phone_number')
