@@ -54,7 +54,7 @@ def format_phone_number(number: str) -> str:
 def send_whatsapp_message(to_number: str, message_body: str):
     """Send a WhatsApp message using Twilio API."""
     if not twilio_client:
-        return False, "Twilio client not initialized."
+        return False, "⚠️ Sorry, messaging service is not available at the moment."
 
     try:
         formatted_to = f"whatsapp:{format_phone_number(to_number)}"
@@ -65,10 +65,13 @@ def send_whatsapp_message(to_number: str, message_body: str):
             body=message_body
         )
         logging.info("✅ WhatsApp message sent successfully.")
-        return True, "Message sent successfully."
+        return True, (
+            f"🎉 Your recommendation has been shared with {to_number}. "
+            "Thank you for helping us spread the word! 🙌"
+        )
     except Exception as e:
         logging.error(f"❌ Failed to send WhatsApp message: {e}")
-        return False, f"Failed to send message: {e}"
+        return False, "❌ Sorry, we couldn’t deliver your message. Please try again later."
 
 # ------------------------------------------------------
 # Firestore Setup
@@ -127,13 +130,18 @@ def webhook():
                         "timestamp": datetime.datetime.utcnow()
                     })
                     logging.info(f"💾 Feedback saved with ID: {doc_ref[1].id}")
-                    message = "Thank you for your feedback! It has been recorded."
+                    message = (
+                        "🌟 Thank you so much for sharing your feedback! "
+                        "Your thoughts help us improve and serve you better. 🙌"
+                    )
                 except Exception as e:
                     logging.error(f"❌ Error saving feedback to Firestore: {e}")
-                    message = "Sorry, I couldn't save your feedback at this time."
+                    message = (
+                        "⚠️ Sorry, something went wrong while saving your feedback. "
+                        "Please try again later."
+                    )
             else:
-                # If no text provided, skip responding with "no feedback" during other flows
-                message = None
+                message = None  # Do not override other flows if no feedback text
 
             if message:
                 fulfillment_response = {
@@ -146,7 +154,10 @@ def webhook():
         elif intent_display_name == "RecommendIntent" or tag == "recommend-share":
             recipient_number = parameters.get("recipient_phone_number")
             share_link = "https://example.com/share"
-            message_body = f"Hello! I wanted to recommend this service to you. Check it out here: {share_link}"
+            message_body = (
+                "👋 Hello! A friend thought you’d love our services. "
+                f"Check them out here: {share_link}"
+            )
 
             if recipient_number:
                 success, response_message = send_whatsapp_message(recipient_number, message_body)
@@ -158,7 +169,9 @@ def webhook():
             else:
                 fulfillment_response = {
                     "fulfillmentResponse": {
-                        "messages": [{"text": {"text": ["Please provide a valid phone number to share the link."]}}]
+                        "messages": [
+                            {"text": {"text": ["📱 Please provide a valid phone number so we can share the link."]}}
+                        ]
                     }
                 }
 
